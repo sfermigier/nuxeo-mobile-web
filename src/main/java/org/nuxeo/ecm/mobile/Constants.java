@@ -17,9 +17,12 @@
 
 package org.nuxeo.ecm.mobile;
 
+/**
+ * Constant utility class which holds all the constants for this application.
+ */
 public class Constants {
 
-    public static final String ROOT = "m";
+    public static final String ROOT = "mobile";
     public static final String HOME = "/" + ROOT;
 
     public static final String BUNDLE_NAME = "org.nuxeo.ecm.mobile";

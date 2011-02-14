@@ -15,6 +15,9 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * JSON-RPC endpoint for the mobile API.
+ */
 @Path(Constants.ROOT + "/j")
 @Produces({"application/json"})
 public class JsonResource {
