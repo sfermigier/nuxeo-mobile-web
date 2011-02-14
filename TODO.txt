@@ -1,0 +1,7 @@
+TODO
+====
+
+- Chose a templating engine (mustache? mve2l? freemarker? StringTemplate?)
+
+- Use https://jersey.dev.java.net/nonav/apidocs/1.3/jersey/com/sun/jersey/spi/template/ViewProcessor.html
+  to cleanly implement views using the chosen templating engine.

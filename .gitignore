@@ -1,0 +1,9 @@
+syntax:glob
+target
+.idea
+nuxeo-mobile-web.i??
+.settings
+.hg*
+*.orig
+data
+src/main/resources/www/st

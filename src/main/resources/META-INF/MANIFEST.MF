@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 1
+Bundle-Name: JAX-RS based mobile front-end for Nuxeo DM
+Bundle-SymbolicName: org.nuxeo.ecm.mobile;singleton=true
+Bundle-Version: 1.0.0
+Bundle-Vendor: Nuxeo
+Provide-Package: org.nuxeo.ecm.mobile
+Require-Bundle: org.nuxeo.ecm.core.api,
+ org.nuxeo.ecm.webengine.core
+Nuxeo-WebModule: org.nuxeo.ecm.mobile.Application
+Nuxeo-Component: OSGI-INF/auth-contrib.xml
