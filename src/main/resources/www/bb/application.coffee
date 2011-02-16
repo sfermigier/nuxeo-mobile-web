@@ -4,9 +4,9 @@
 #
 
 if @location.port == "9998"
-  ROOT = @location.origin + "/m/j/"
+  ROOT = @location.origin + "/mobile/api/"
 else
-  ROOT = @location.origin + "/nuxeo/site/m/j/"
+  ROOT = @location.origin + "/nuxeo/site/mobile/api/"
 
 console.log("Root = " + ROOT)
 
@@ -36,16 +36,16 @@ console.log("location: " + @location.href);
 # Document class
 #
 
-class Document extends Backbone.Model
+class DocumentModel extends Backbone.Model
   constructor: (oid) ->
     super()
     @oid = oid
 
   url: ->
     if @oid
-      ROOT + "i/" + @oid
+      ROOT + "info/" + @oid
     else
-      ROOT + "i/"
+      ROOT + "info/"
 
 
 class TimelineDocument extends Backbone.Model
@@ -75,26 +75,53 @@ class BaseView extends Backbone.View
     debug("model", model)
 
     if model.isfolder
-      for child in model.children
-        child.icon = getIconName(child)
-        console.log(child.icon)
-      content = Mustache.to_html(@template, model)
-      @el.find('.ui-content').html(content)
-      @el.find('h1').html(@model.title)
-      # A hacky way of reapplying the jquery mobile styles
-      app.reapplyStyles(@el)
+      @render_folder(model)
     else
-      url = ROOT + 'd/' + model.oid
-      console.log(url)
-      window.location.href = url
+      @render_file(model)
+
+  render_folder: (model) =>
+    template = @template || @list_template
+    for child in model.children
+      child.icon = getIconName(child)
+      console.log(child.icon)
+    content = Mustache.to_html(template, model)
+    @el.find('.ui-content').html(content)
+    @el.find('h1').html(@model.title)
+    # A hacky way of reapplying the jquery mobile styles
+    app.reapplyStyles(@el)
+
+  render_file: (model) =>
+    template = @template || @metadata_template
+    content = Mustache.to_html(template, model)
+    @el.find('.ui-content').html(content)
+    @el.find('h1').html(@model.title)
+    # A hacky way of reapplying the jquery mobile styles
+    app.reapplyStyles(@el)
+
+    #url = ROOT + 'download/' + model.oid
+    #console.log(url)
+    #window.location.href = url
 
 
 class DocumentView extends BaseView
   constructor: (oid) ->
     super
-    @model = new Document(oid)
+    @model = new DocumentModel(oid)
     @el = app.activePage()
-    @template = '''
+
+    @metadata_template = '''
+      <div>
+
+      <p>Title: {{title}}</p>
+      <p>Path: {{path}}</p>
+      <p>Created: {{created}}</p>
+      <p>Modified: {{modified}}</p>
+
+      <p><a href="">View</a></p>
+
+      </div>
+    '''
+    @list_template = '''
       <div>
 
       <ul data-role="listview" data-theme="c">
@@ -104,7 +131,6 @@ class DocumentView extends BaseView
           <img src="icons/{{icon}}" class="ui-li-icon"/>
           {{title}}
           {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}
-          <!--div class="ui-li-desc">{{created}}</div-->
           </a>
           </li>
         {{/children}}
@@ -140,7 +166,7 @@ class TimelineView extends BaseView
     @model.bind 'change', @render
 
 #
-# Home View
+# Basic View
 #
 
 class HomeView extends Backbone.View
@@ -166,7 +192,28 @@ class HomeView extends Backbone.View
   render: =>
     # Render the content
     @el.find('.ui-content').html(@content)
+    # A hacky way of reapplying the jquery mobile styles
+    app.reapplyStyles(@el)
 
+
+class HelpView extends Backbone.View
+  constructor: ->
+    super
+
+    @el = app.activePage()
+
+    @content = '''
+      <div>
+        <h3>Help about this application</h3>
+        <p>Nuxeo Mobile is a mobile client for the Nuxeo EP enterprise Content Management Platform.</p>
+        <p>For more information about the Nuxeo EP platform, <a href="http://www.nuxeo.com/">Click Here</a></p>
+      </div>
+      '''
+    @render()
+
+  render: =>
+    # Render the content
+    @el.find('.ui-content').html(@content)
     # A hacky way of reapplying the jquery mobile styles
     app.reapplyStyles(@el)
 
@@ -176,12 +223,13 @@ class HomeView extends Backbone.View
 
 class NuxeoController extends Backbone.Controller
   routes :
-    #"venues-:cid-edit" : "edit"
-    #"venues-:cid" : "show"
     "home" : "home"
     "timeline": "timeline"
     "doc": "doc"
     "doc-:oid" : "doc"
+    "search" : "search" # TODO
+    "help" : "help"
+
 
   constructor: ->
     super
@@ -195,8 +243,10 @@ class NuxeoController extends Backbone.Controller
 
   doc: (oid) ->
     view_name = "doc-" + oid
-    console.log(view_name)
     @_views[view_name] ||= new DocumentView(oid)
+
+  help: ->
+    @_views['help'] ||= new HelpView
 
 
 app.nuxeoController = new NuxeoController()

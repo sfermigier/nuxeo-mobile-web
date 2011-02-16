@@ -26,7 +26,8 @@ public abstract class AbstractServerTest {
 
     static final int PORT = 9999;
 
-    static final String ROOT_URI = "http://localhost:" + PORT + Constants.HOME;
+    static final String WEB_ROOT_URI = "http://localhost:" + PORT + Constants.HOME + "/s";
+    static final String API_ROOT_URI = "http://localhost:" + PORT + Constants.HOME + "/" + Constants.API_ROOT;
 
     @BeforeClass
     public static void startServer() throws Exception {

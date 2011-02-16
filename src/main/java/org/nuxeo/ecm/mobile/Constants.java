@@ -23,6 +23,7 @@ package org.nuxeo.ecm.mobile;
 public class Constants {
 
     public static final String ROOT = "mobile";
+    public static final String API_ROOT = "api";
     public static final String HOME = "/" + ROOT;
 
     public static final String BUNDLE_NAME = "org.nuxeo.ecm.mobile";

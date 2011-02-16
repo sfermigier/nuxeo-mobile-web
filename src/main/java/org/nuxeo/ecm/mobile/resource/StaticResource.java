@@ -27,6 +27,9 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Gives access to static resources. Probably not useful in the end.
+ */
 @Path(Constants.ROOT + "/s")
 public class StaticResource {
 
@@ -57,7 +60,7 @@ public class StaticResource {
         } else {
             throw new IllegalStateException("Can't find mime type for: " + path);
         }
-        System.out.println(mimeType);
+        // System.out.println(mimeType);
         return Response.ok(stream).type(mimeType).build();
     }
 

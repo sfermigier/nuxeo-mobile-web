@@ -9,6 +9,7 @@ test:
 	mvn $(MVN_OPT) clean test
 
 build:
+	coffee -c .
 	mvn $(MVN_OPT) clean install -Dmaven.test.skip=true
 
 deploy: build
@@ -37,4 +38,5 @@ clean:
 superclean: clean
 	mvn dependency:purge-local-repository
 
-
+autocompile:
+	coffee -wc .

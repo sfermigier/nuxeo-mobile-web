@@ -21,7 +21,6 @@ package org.nuxeo.ecm.mobile.provider;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.nuxeo.ecm.mobile.Util;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;

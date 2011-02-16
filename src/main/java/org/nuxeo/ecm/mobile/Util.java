@@ -38,7 +38,7 @@ public class Util {
     }
 
     /**
-     * Gets a core session using a mechanism specific to WebEngine.
+     * Gets a core session using a WebEngine API.
      */
     public static CoreSession getSession(HttpServletRequest request) throws Exception {
         UserSession userSession = UserSession.getCurrentSession(request);
@@ -51,7 +51,7 @@ public class Util {
 
     /**
      * Gets a core session directly from the RepositoryManager.
-     * Used for the test server.
+     * Used by the test server, not for production.
      */
     public static CoreSession getSession() throws Exception {
         RepositoryManager rm = Framework.getService(RepositoryManager.class);

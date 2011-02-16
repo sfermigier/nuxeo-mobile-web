@@ -35,7 +35,7 @@ import java.util.*;
 /**
  * JSON-RPC endpoint for the mobile API.
  */
-@Path(Constants.ROOT + "/j")
+@Path(Constants.ROOT + "/" + Constants.API_ROOT)
 @Produces({"application/json"})
 public class JsonResource {
 
@@ -62,7 +62,7 @@ public class JsonResource {
      * Gets info (as JSON) on an object given its OID.
      */
     @GET
-    @Path("i/{oid:.*}")
+    @Path("info/{oid:.*}")
     public Object info(@PathParam("oid") String oid) throws ClientException {
         DocumentRef ref;
         if (oid == null || oid.isEmpty()) {
@@ -72,9 +72,15 @@ public class JsonResource {
         }
         DocumentModel doc = session.getDocument(ref);
         Map<String, Object> model = makeModel(doc);
+        System.out.println(JSONValue.toJSONString(model));
         if (doc.isFolder()) {
             model.put("children", makeDocListModel(session.getChildren(doc.getRef())));
         }
+        // Special case
+        if (oid == null || oid.isEmpty()) {
+        	model.put("title", "Root");
+        }
+        System.out.println(JSONValue.toJSONString(model));
         return JSONValue.toJSONString(model);
     }
 
@@ -82,7 +88,7 @@ public class JsonResource {
      * Downloads an object given its OID.
      */
     @GET
-    @Path("d/{oid:.*}")
+    @Path("download/{oid:.*}")
     public Object download(@PathParam("oid") String oid) throws ClientException, IOException {
         DocumentRef ref = new IdRef(oid);
         DocumentModel doc = session.getDocument(ref);
@@ -100,6 +106,21 @@ public class JsonResource {
         }
     }
 
+    /**
+     * Downloads PDF rendering of an object given its OID.
+     */
+    @GET
+    @Path("render/{oid:.*}")
+    public Object render(@PathParam("oid") String oid) throws ClientException, IOException {
+        DocumentRef ref = new IdRef(oid);
+        DocumentModel doc = session.getDocument(ref);
+        // TODO
+        return null;
+    }
+
+    /**
+     * Gets info about the recently updated documents.
+     */
     @GET
     @Path("updates")
     public Object updates() throws Exception {
@@ -113,6 +134,9 @@ public class JsonResource {
         return JSONValue.toJSONString(model);
     }
 
+    /**
+     * Performs a full-text search.
+     */
     @GET
     @Path("search")
     public Object search(@QueryParam("q") String query) throws Exception {
@@ -130,10 +154,6 @@ public class JsonResource {
         Collection<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
         if (modelList != null) {
             for (DocumentModel childModel : modelList) {
-                if (!childModel.isFolder() && !hasBlob(childModel)
-                        && !childModel.getType().equals("Note")) {
-                    continue;
-                }
                 Map<String, Object> child = makeModel(childModel);
                 result.add(child);
             }
@@ -148,6 +168,7 @@ public class JsonResource {
         model.put("name", doc.getName() + (doc.isFolder() ? "/" : ""));
         model.put("path", doc.getPathAsString());
         model.put("isfolder", doc.isFolder());
+        model.put("hasfile", hasFile(doc));
         DataModel dublinCore = doc.getDataModel("dublincore");
         for (Map.Entry<String, Object> entry : dublinCore.getMap().entrySet()) {
             String key = entry.getKey();
@@ -212,6 +233,13 @@ public class JsonResource {
             }
         }
         return null;
+    }
+    
+    // These ad-hoc method try to find file or file-like content in the document.
+
+    private static boolean hasFile(DocumentModel doc) {
+    	// Deal with special cases here
+    	return hasBlob(doc) || doc.getType().equals("Note");
     }
 
     private static boolean hasBlob(DocumentModel doc) {

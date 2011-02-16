@@ -17,13 +17,18 @@
 
 package org.nuxeo.ecm.mobile;
 
+import java.util.List;
+import java.util.Map;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import org.json.simple.JSONValue;
+
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Simple test using the Jersey HTTP client.
@@ -31,24 +36,50 @@ import static org.junit.Assert.fail;
  */
 public class JerseyClientTest extends AbstractServerTest {
 
+	public Client client;
+	public WebResource api;
+	
+	@Before
+	public void setUp() {
+        client = Client.create();
+        api = client.resource(API_ROOT_URI);		
+	}
+
     @Test
-    public void simpleTest() {
-        Client client = Client.create();
-        WebResource r = client.resource(ROOT_URI);
+    public void webTest() {
+        WebResource r = client.resource(WEB_ROOT_URI);
 
         String e1 = r.path("").get(String.class);
         assertTrue(e1.length() > 0);
+    }
 
-        String e2 = r.path("r/").get(String.class);
-        assertTrue(e2.length() > 0);
-        assertTrue(e2.contains("Folder"));
+    @Test
+    public void testUpdates() {
+        String e = api.path("updates").get(String.class);
+        assertTrue(e.length() > 0);
+        Object o = JSONValue.parse(e);
+        assertTrue(o instanceof List);
+    }
+        
+    @Test
+    public void testSearch() {
+        String e = api.path("search").queryParam("q", "").get(String.class);
+        assertTrue(e.length() > 0);
+        Object o = JSONValue.parse(e);
+        assertTrue(o instanceof List);
+    }
 
-        String e3 = r.path("search").get(String.class);
-        assertTrue(e3.length() > 0);
-
-        String e4 = r.path("timeline").get(String.class);
-        assertTrue(e4.length() > 0);
-        assertTrue(e4.contains("quality.jpg"));
+    @SuppressWarnings("rawtypes")
+	@Test
+    public void testRoot() {
+        String e = api.path("info/").get(String.class);
+        System.out.println(e);
+        assertTrue(e.length() > 0);
+        Object o = JSONValue.parse(e);
+        assertTrue(o instanceof Map);
+        Map m = (Map) o;
+        assertEquals("Root", m.get("title"));        
+        assertEquals("/", m.get("path"));        
     }
 
 }

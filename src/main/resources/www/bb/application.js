@@ -1,5 +1,5 @@
 (function() {
-  var BaseView, Document, DocumentView, HomeView, NuxeoController, ROOT, TimelineDocument, TimelineView, app, debug;
+  var BaseView, DocumentModel, DocumentView, HelpView, HomeView, NuxeoController, ROOT, TimelineDocument, TimelineView, app, debug;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -9,9 +9,9 @@
     return child;
   }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   if (this.location.port === "9998") {
-    ROOT = this.location.origin + "/m/j/";
+    ROOT = this.location.origin + "/mobile/api/";
   } else {
-    ROOT = this.location.origin + "/nuxeo/site/m/j/";
+    ROOT = this.location.origin + "/nuxeo/site/mobile/api/";
   }
   console.log("Root = " + ROOT);
   debug = function(y, x) {
@@ -36,20 +36,20 @@
     }
   };
   console.log("location: " + this.location.href);
-  Document = (function() {
-    __extends(Document, Backbone.Model);
-    function Document(oid) {
-      Document.__super__.constructor.call(this);
+  DocumentModel = (function() {
+    __extends(DocumentModel, Backbone.Model);
+    function DocumentModel(oid) {
+      DocumentModel.__super__.constructor.call(this);
       this.oid = oid;
     }
-    Document.prototype.url = function() {
+    DocumentModel.prototype.url = function() {
       if (this.oid) {
-        return ROOT + "i/" + this.oid;
+        return ROOT + "info/" + this.oid;
       } else {
-        return ROOT + "i/";
+        return ROOT + "info/";
       }
     };
-    return Document;
+    return DocumentModel;
   })();
   TimelineDocument = (function() {
     function TimelineDocument() {
@@ -66,11 +66,13 @@
   })();
   BaseView = (function() {
     function BaseView() {
+      this.render_file = __bind(this.render_file, this);;
+      this.render_folder = __bind(this.render_folder, this);;
       this.render = __bind(this.render, this);;      BaseView.__super__.constructor.apply(this, arguments);
     }
     __extends(BaseView, Backbone.View);
     BaseView.prototype.render = function() {
-      var child, content, model, url, _i, _len, _ref;
+      var model;
       if (this.model.children) {
         model = this.model;
       } else {
@@ -83,21 +85,32 @@
       }
       debug("model", model);
       if (model.isfolder) {
-        _ref = model.children;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          child = _ref[_i];
-          child.icon = getIconName(child);
-          console.log(child.icon);
-        }
-        content = Mustache.to_html(this.template, model);
-        this.el.find('.ui-content').html(content);
-        this.el.find('h1').html(this.model.title);
-        return app.reapplyStyles(this.el);
+        return this.render_folder(model);
       } else {
-        url = ROOT + 'd/' + model.oid;
-        console.log(url);
-        return window.location.href = url;
+        return this.render_file(model);
       }
+    };
+    BaseView.prototype.render_folder = function(model) {
+      var child, content, template, _i, _len, _ref;
+      template = this.template || this.list_template;
+      _ref = model.children;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        child.icon = getIconName(child);
+        console.log(child.icon);
+      }
+      content = Mustache.to_html(template, model);
+      this.el.find('.ui-content').html(content);
+      this.el.find('h1').html(this.model.title);
+      return app.reapplyStyles(this.el);
+    };
+    BaseView.prototype.render_file = function(model) {
+      var content, template;
+      template = this.template || this.metadata_template;
+      content = Mustache.to_html(template, model);
+      this.el.find('.ui-content').html(content);
+      this.el.find('h1').html(this.model.title);
+      return app.reapplyStyles(this.el);
     };
     return BaseView;
   })();
@@ -105,9 +118,10 @@
     __extends(DocumentView, BaseView);
     function DocumentView(oid) {
       DocumentView.__super__.constructor.apply(this, arguments);
-      this.model = new Document(oid);
+      this.model = new DocumentModel(oid);
       this.el = app.activePage();
-      this.template = '<div>\n\n<ul data-role="listview" data-theme="c">\n  {{#children}}\n    <li class="ui-li ui-li-has-icon ui-btn ui-icon-right" >\n    <a href="#doc-{{oid}}">\n    <img src="icons/{{icon}}" class="ui-li-icon"/>\n    {{title}}\n    {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}\n    <!--div class="ui-li-desc">{{created}}</div-->\n    </a>\n    </li>\n  {{/children}}\n</ul>\n\n</div>';
+      this.metadata_template = '<div>\n\n<p>Title: {{title}}</p>\n<p>Path: {{path}}</p>\n<p>Created: {{created}}</p>\n<p>Modified: {{modified}}</p>\n\n<p><a href="">View</a></p>\n\n</div>';
+      this.list_template = '<div>\n\n<ul data-role="listview" data-theme="c">\n  {{#children}}\n    <li class="ui-li ui-li-has-icon ui-btn ui-icon-right" >\n    <a href="#doc-{{oid}}">\n    <img src="icons/{{icon}}" class="ui-li-icon"/>\n    {{title}}\n    {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}\n    </a>\n    </li>\n  {{/children}}\n</ul>\n\n</div>';
       this.model.fetch();
       this.model.bind('change', this.render);
     }
@@ -139,13 +153,29 @@
     };
     return HomeView;
   })();
+  HelpView = (function() {
+    __extends(HelpView, Backbone.View);
+    function HelpView() {
+      this.render = __bind(this.render, this);;      HelpView.__super__.constructor.apply(this, arguments);
+      this.el = app.activePage();
+      this.content = '<div>\n  <h3>Help about this application</h3>\n  <p>Nuxeo Mobile is a mobile client for the Nuxeo EP enterprise Content Management Platform.</p>\n  <p>For more information about the Nuxeo EP platform, <a href="http://www.nuxeo.com/">Click Here</a></p>\n</div>';
+      this.render();
+    }
+    HelpView.prototype.render = function() {
+      this.el.find('.ui-content').html(this.content);
+      return app.reapplyStyles(this.el);
+    };
+    return HelpView;
+  })();
   NuxeoController = (function() {
     __extends(NuxeoController, Backbone.Controller);
     NuxeoController.prototype.routes = {
       "home": "home",
       "timeline": "timeline",
       "doc": "doc",
-      "doc-:oid": "doc"
+      "doc-:oid": "doc",
+      "search": "search",
+      "help": "help"
     };
     function NuxeoController() {
       NuxeoController.__super__.constructor.apply(this, arguments);
@@ -162,8 +192,11 @@
     NuxeoController.prototype.doc = function(oid) {
       var view_name, _base;
       view_name = "doc-" + oid;
-      console.log(view_name);
       return (_base = this._views)[view_name] || (_base[view_name] = new DocumentView(oid));
+    };
+    NuxeoController.prototype.help = function() {
+      var _base;
+      return (_base = this._views)['help'] || (_base['help'] = new HelpView);
     };
     return NuxeoController;
   })();
