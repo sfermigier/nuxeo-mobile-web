@@ -1,4 +1,3 @@
-
 #
 # Some helper methods
 #
@@ -8,9 +7,10 @@ if @location.port == "9998"
 else
   ROOT = @location.origin + "/nuxeo/site/mobile/api/"
 
-console.log("Root = " + ROOT)
+#console.log("Root = " + ROOT)
 
-debug = (y, x) -> console.log(y + ": " + JSON.stringify(x) + "\n")
+#debug = (y, x) -> console.log(y + ": " + JSON.stringify(x) + "\n")
+debug = (y, x) ->
 
 app =
   activePage: ->
@@ -19,6 +19,7 @@ app =
   reapplyStyles: (el) ->
     el.find('ul[data-role]').listview();
     el.find('div[data-role="fieldcontain"]').fieldcontain();
+    el.find('a[data-role="button"]').button();
     el.find('button[data-role="button"]').button();
     el.find('input,textarea').textinput();
     el.page()
@@ -30,7 +31,7 @@ app =
     $.historyBack()
       
 
-console.log("location: " + @location.href);
+#console.log("location: " + @location.href);
 
 #
 # Document class
@@ -49,78 +50,33 @@ class DocumentModel extends Backbone.Model
 
 
 class TimelineDocument extends Backbone.Model
-  url : ROOT + "updates"
+  url: ROOT + "updates"
 
   parse: (response) ->
-    @title = "Timeline"
     @children = response
-    @isfolder = true
 
 
 #
 # Views
 #
 
-class BaseView extends Backbone.View
-  render: =>
-    if @model.children
-      model = @model
-    else
-      model = {
-        children: @model.get('children')
-        title: @model.get('title')
-        isfolder: @model.get('isfolder')
-        oid: @model.oid
-      }
-    debug("model", model)
-
-    if model.isfolder
-      @render_folder(model)
-    else
-      @render_file(model)
-
-  render_folder: (model) =>
-    template = @template || @list_template
-    for child in model.children
-      child.icon = getIconName(child)
-      console.log(child.icon)
-    content = Mustache.to_html(template, model)
-    @el.find('.ui-content').html(content)
-    @el.find('h1').html(@model.title)
-    # A hacky way of reapplying the jquery mobile styles
-    app.reapplyStyles(@el)
-
-  render_file: (model) =>
-    template = @template || @metadata_template
-    content = Mustache.to_html(template, model)
-    @el.find('.ui-content').html(content)
-    @el.find('h1').html(@model.title)
-    # A hacky way of reapplying the jquery mobile styles
-    app.reapplyStyles(@el)
-
-    #url = ROOT + 'download/' + model.oid
-    #console.log(url)
-    #window.location.href = url
-
-
-class DocumentView extends BaseView
+class DocumentView extends Backbone.View
   constructor: (oid) ->
     super
     @model = new DocumentModel(oid)
     @el = app.activePage()
 
     @metadata_template = '''
-      <div>
-
+      <div data-role="content">
       <p>Title: {{title}}</p>
       <p>Path: {{path}}</p>
       <p>Created: {{created}}</p>
       <p>Modified: {{modified}}</p>
 
-      <p><a href="">View</a></p>
-
+      <a href="{{download_url}}" rel="external" data-role="button">View document</a>
       </div>
     '''
+
     @list_template = '''
       <div>
 
@@ -142,19 +98,47 @@ class DocumentView extends BaseView
     @model.fetch()
     @model.bind 'change', @render
 
+  render: =>
+    if @model.get("isfolder")
+      @render_folder()
+    else
+      @render_file()
+    # A hacky way of reapplying the jquery mobile styles
+    app.reapplyStyles(@el)
 
-class TimelineView extends BaseView
+  render_folder: =>
+    model = @model.toJSON()
+    for child in model.children
+      child.icon = getIconName(child)
+      #console.log(child.icon)
+    content = Mustache.to_html(@list_template, model)
+    @el.find('.ui-content').html(content)
+    @el.find('h1').html(model.title)
+
+  render_file: =>
+    model = @model.toJSON()
+    debug("model", model)
+    model.download_url = ROOT + 'download/' + model.oid
+    content = Mustache.to_html(@metadata_template, model)
+    @el.find('.ui-content').html(content)
+    @el.find('h1').html(model.title)
+
+
+class TimelineView extends Backbone.View
   constructor: ->
     super
-    @model = new TimelineDocument
     @el = app.activePage()
     @template = '''
       <div>
 
-      <ul data-role="listview" data-theme="c" data-filter="true">
+      <ul data-role="listview" data-theme="c">
         {{#children}}
-          <li><a href="#doc-{{oid}}">{{title}}</a><br>
-          toto titi
+          <li class="ui-li ui-li-has-icon ui-btn ui-icon-right" >
+          <a href="#doc-{{oid}}">
+          <img src="icons/{{icon}}" class="ui-li-icon"/>
+          {{title}}
+          {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}
+          </a>
           </li>
         {{/children}}
       </ul>
@@ -162,8 +146,17 @@ class TimelineView extends BaseView
       </div>
     '''
 
+    @model = new TimelineDocument
     @model.fetch()
     @model.bind 'change', @render
+
+  render: =>
+    for child in @model.children
+      child.icon = getIconName(child)
+    content = Mustache.to_html(@template, @model)
+    @el.find('.ui-content').html(content)
+    @el.find('h1').html("Recent updates")
+    app.reapplyStyles(@el)
 
 #
 # Basic View
@@ -222,13 +215,13 @@ class HelpView extends Backbone.View
 #
 
 class NuxeoController extends Backbone.Controller
-  routes :
-    "home" : "home"
+  routes:
+    "home": "home"
     "timeline": "timeline"
     "doc": "doc"
-    "doc-:oid" : "doc"
-    "search" : "search" # TODO
-    "help" : "help"
+    "doc-:oid": "doc"
+    "search": "search" # TODO
+    "help": "help"
 
 
   constructor: ->
@@ -248,6 +241,8 @@ class NuxeoController extends Backbone.Controller
   help: ->
     @_views['help'] ||= new HelpView
 
+  search: ->
+    @_views['help'] ||= new HelpView
 
 app.nuxeoController = new NuxeoController()
 

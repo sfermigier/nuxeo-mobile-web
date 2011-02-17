@@ -1,5 +1,5 @@
 (function() {
-  var BaseView, DocumentModel, DocumentView, HelpView, HomeView, NuxeoController, ROOT, TimelineDocument, TimelineView, app, debug;
+  var DocumentModel, DocumentView, HelpView, HomeView, NuxeoController, ROOT, TimelineDocument, TimelineView, app, debug;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -13,10 +13,7 @@
   } else {
     ROOT = this.location.origin + "/nuxeo/site/mobile/api/";
   }
-  console.log("Root = " + ROOT);
-  debug = function(y, x) {
-    return console.log(y + ": " + JSON.stringify(x) + "\n");
-  };
+  debug = function(y, x) {};
   app = {
     activePage: function() {
       return $(".ui-page-active");
@@ -24,6 +21,7 @@
     reapplyStyles: function(el) {
       el.find('ul[data-role]').listview();
       el.find('div[data-role="fieldcontain"]').fieldcontain();
+      el.find('a[data-role="button"]').button();
       el.find('button[data-role="button"]').button();
       el.find('input,textarea').textinput();
       return el.page();
@@ -35,7 +33,6 @@
       return $.historyBack();
     }
   };
-  console.log("location: " + this.location.href);
   DocumentModel = (function() {
     __extends(DocumentModel, Backbone.Model);
     function DocumentModel(oid) {
@@ -58,85 +55,76 @@
     __extends(TimelineDocument, Backbone.Model);
     TimelineDocument.prototype.url = ROOT + "updates";
     TimelineDocument.prototype.parse = function(response) {
-      this.title = "Timeline";
-      this.children = response;
-      return this.isfolder = true;
+      return this.children = response;
     };
     return TimelineDocument;
   })();
-  BaseView = (function() {
-    function BaseView() {
+  DocumentView = (function() {
+    __extends(DocumentView, Backbone.View);
+    function DocumentView(oid) {
       this.render_file = __bind(this.render_file, this);;
       this.render_folder = __bind(this.render_folder, this);;
-      this.render = __bind(this.render, this);;      BaseView.__super__.constructor.apply(this, arguments);
-    }
-    __extends(BaseView, Backbone.View);
-    BaseView.prototype.render = function() {
-      var model;
-      if (this.model.children) {
-        model = this.model;
-      } else {
-        model = {
-          children: this.model.get('children'),
-          title: this.model.get('title'),
-          isfolder: this.model.get('isfolder'),
-          oid: this.model.oid
-        };
-      }
-      debug("model", model);
-      if (model.isfolder) {
-        return this.render_folder(model);
-      } else {
-        return this.render_file(model);
-      }
-    };
-    BaseView.prototype.render_folder = function(model) {
-      var child, content, template, _i, _len, _ref;
-      template = this.template || this.list_template;
-      _ref = model.children;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        child = _ref[_i];
-        child.icon = getIconName(child);
-        console.log(child.icon);
-      }
-      content = Mustache.to_html(template, model);
-      this.el.find('.ui-content').html(content);
-      this.el.find('h1').html(this.model.title);
-      return app.reapplyStyles(this.el);
-    };
-    BaseView.prototype.render_file = function(model) {
-      var content, template;
-      template = this.template || this.metadata_template;
-      content = Mustache.to_html(template, model);
-      this.el.find('.ui-content').html(content);
-      this.el.find('h1').html(this.model.title);
-      return app.reapplyStyles(this.el);
-    };
-    return BaseView;
-  })();
-  DocumentView = (function() {
-    __extends(DocumentView, BaseView);
-    function DocumentView(oid) {
-      DocumentView.__super__.constructor.apply(this, arguments);
+      this.render = __bind(this.render, this);;      DocumentView.__super__.constructor.apply(this, arguments);
       this.model = new DocumentModel(oid);
       this.el = app.activePage();
-      this.metadata_template = '<div>\n\n<p>Title: {{title}}</p>\n<p>Path: {{path}}</p>\n<p>Created: {{created}}</p>\n<p>Modified: {{modified}}</p>\n\n<p><a href="">View</a></p>\n\n</div>';
+      this.metadata_template = '<div data-role="content">\n<p>Title: {{title}}</p>\n<p>Path: {{path}}</p>\n<p>Created: {{created}}</p>\n<p>Modified: {{modified}}</p>\n\n<a href="{{download_url}}" rel="external" data-role="button">View document</a>\n</div>';
       this.list_template = '<div>\n\n<ul data-role="listview" data-theme="c">\n  {{#children}}\n    <li class="ui-li ui-li-has-icon ui-btn ui-icon-right" >\n    <a href="#doc-{{oid}}">\n    <img src="icons/{{icon}}" class="ui-li-icon"/>\n    {{title}}\n    {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}\n    </a>\n    </li>\n  {{/children}}\n</ul>\n\n</div>';
       this.model.fetch();
       this.model.bind('change', this.render);
     }
+    DocumentView.prototype.render = function() {
+      if (this.model.get("isfolder")) {
+        this.render_folder();
+      } else {
+        this.render_file();
+      }
+      return app.reapplyStyles(this.el);
+    };
+    DocumentView.prototype.render_folder = function() {
+      var child, content, model, _i, _len, _ref;
+      model = this.model.toJSON();
+      _ref = model.children;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        child.icon = getIconName(child);
+      }
+      content = Mustache.to_html(this.list_template, model);
+      this.el.find('.ui-content').html(content);
+      return this.el.find('h1').html(model.title);
+    };
+    DocumentView.prototype.render_file = function() {
+      var content, model;
+      model = this.model.toJSON();
+      debug("model", model);
+      model.download_url = ROOT + 'download/' + model.oid;
+      content = Mustache.to_html(this.metadata_template, model);
+      this.el.find('.ui-content').html(content);
+      return this.el.find('h1').html(model.title);
+    };
     return DocumentView;
   })();
   TimelineView = (function() {
-    __extends(TimelineView, BaseView);
+    __extends(TimelineView, Backbone.View);
     function TimelineView() {
-      TimelineView.__super__.constructor.apply(this, arguments);
-      this.model = new TimelineDocument;
+      this.render = __bind(this.render, this);;      TimelineView.__super__.constructor.apply(this, arguments);
       this.el = app.activePage();
-      this.template = '<div>\n\n<ul data-role="listview" data-theme="c" data-filter="true">\n  {{#children}}\n    <li><a href="#doc-{{oid}}">{{title}}</a><br>\n    toto titi\n    </li>\n  {{/children}}\n</ul>\n\n</div>';
+      this.template = '<div>\n\n<ul data-role="listview" data-theme="c">\n  {{#children}}\n    <li class="ui-li ui-li-has-icon ui-btn ui-icon-right" >\n    <a href="#doc-{{oid}}">\n    <img src="icons/{{icon}}" class="ui-li-icon"/>\n    {{title}}\n    {{#childcount}}<span class="ui-li-count"> {{childcount}}</span>{{/childcount}}\n    </a>\n    </li>\n  {{/children}}\n</ul>\n\n</div>';
+      this.model = new TimelineDocument;
       this.model.fetch();
       this.model.bind('change', this.render);
     }
+    TimelineView.prototype.render = function() {
+      var child, content, _i, _len, _ref;
+      _ref = this.model.children;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        child.icon = getIconName(child);
+      }
+      content = Mustache.to_html(this.template, this.model);
+      this.el.find('.ui-content').html(content);
+      this.el.find('h1').html("Recent updates");
+      return app.reapplyStyles(this.el);
+    };
     return TimelineView;
   })();
   HomeView = (function() {
@@ -195,6 +183,10 @@
       return (_base = this._views)[view_name] || (_base[view_name] = new DocumentView(oid));
     };
     NuxeoController.prototype.help = function() {
+      var _base;
+      return (_base = this._views)['help'] || (_base['help'] = new HelpView);
+    };
+    NuxeoController.prototype.search = function() {
       var _base;
       return (_base = this._views)['help'] || (_base['help'] = new HelpView);
     };
